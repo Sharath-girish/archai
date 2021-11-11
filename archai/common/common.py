@@ -189,7 +189,7 @@ def common_init_dist(config_filepath: Optional[str]=None,
         is_clean = False
 
     if apex.is_dist():
-        is_clean = torch.Tensor([is_clean]).to(torch.device(f'cuda:{apex.global_rank}'))
+        is_clean = torch.Tensor([is_clean]).to(apex.device)
         torch.distributed.broadcast(is_clean, src=0)
         is_clean = is_clean.item()
     # if resume set to False, regenerate conf
