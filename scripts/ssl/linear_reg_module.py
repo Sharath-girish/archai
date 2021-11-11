@@ -83,7 +83,7 @@ parser.add_argument('--n_epochs', type=int, default=300)
 parser.add_argument('--manual_seed', type=int, default=None)
 parser.add_argument('--init_lr', type=float, default=0.05)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
-parser.add_argument('--dataset', type=str, default='cifar10')
+parser.add_argument('--dataset_name', type=str, default='cifar10')
 
 parser.add_argument('--train_batch_size', type=int, default=256)
 parser.add_argument('--test_batch_size', type=int, default=500)
@@ -237,7 +237,7 @@ def linear_reg(features):
     kf = KFold(n_splits=args.kfolds)
     best_params = {'weight_decay':0.0, 'batch_size':128, 'init_lr':5.0}
     best_acc = 0.0
-    if args.dataset != 'imagenet':
+    if args.dataset_name != 'imagenet':
         for weight_decay in [0.0, 1e-5, 1e-4, 1e-3]:
             for batch_size in [128]:
                 for init_lr in [5.0]:
