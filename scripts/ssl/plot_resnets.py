@@ -96,45 +96,51 @@ with open('/vulcanscratch/sgirish/eval_models.csv') as csv_file:
                 imagenet_mobilenet_models[name.strip().split('-')[-1]] = float(row['epoch_top1_test'])
 imagenet_models = imagenet_resnet_models if key == 'resnet' else imagenet_mobilenet_models
 
-# params = {}
-# if key == 'resnet':
-#     with open('confs/algos/simclr_resnets.yaml', 'r') as f:
-#         conf_models = yaml.load(f, Loader=yaml.Loader)
-#     all_models = ['resnet18','resnet34','resnet50']+[f'resnet_v{i}' for i in range(1,92)]
-# elif key == 'mobilenet':
-#     with open('confs/algos/simclr_mobilenets.yaml', 'r') as f:
-#         conf_models = yaml.load(f, Loader=yaml.Loader)
-#     all_models = [f'mobilenet_v{i}' for i in range(1,43)]
+params = {}
+if key == 'resnet':
+    with open('confs/algos/simclr_resnets.yaml', 'r') as f:
+        conf_models = yaml.load(f, Loader=yaml.Loader)
+    all_models = ['resnet18','resnet34','resnet50']+[f'resnet_v{i}' for i in range(1,92)]
+elif key == 'mobilenet':
+    with open('confs/algos/simclr_mobilenets.yaml', 'r') as f:
+        conf_models = yaml.load(f, Loader=yaml.Loader)
+    all_models = [f'mobilenet_v{i}' for i in range(172,299)]
 
-# for net in all_models:
-#     conf_model = conf_models[net]
-#     if key == 'resnet':
-#         model = ModelSimCLRResNet('cifar10', conf_model['depth'], conf_model['layers'], conf_model['bottleneck'],
-#                 False, conf_model['hidden_dim'], conf_model['out_features'], groups = conf_model['groups'],
-#                 width_per_group=conf_model['width_per_group'])
-#         l1, l2, l3, l4 = conf_model['layers']
-#         net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
-#                     'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-#                                         if p.requires_grad and ('layer1' in n or 'layer2' in n))/1e6,
-#                     'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-#                                         if p.requires_grad and ('layer3' in n or 'layer4' in n))/1e6,
-#                     'l1':l1, 'l2': l2, 'l3': l3, 'l4': l4}
-#         params[net] = net_dict
-#     else:
-#         inverted_residual_setting = [[conf_model['t'][i],conf_model['c'][i],conf_model['n'][i],conf_model['s'][i]] \
-#                                         for i in range(len(conf_model['t']))]
-#         model = ModelSimCLRMobileNet(hidden_dim = conf_model["hidden_dim"], out_features = conf_model["out_features"],
-#                 inverted_residual_setting = inverted_residual_setting, width_mult = conf_model['width_mult'], compress = False
-#                 )
-#         top_layers = [f'features.{i}.' for i in range(0,sum(conf_model['n'][:4]))]
-#         net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
-#                     'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-#                                         if p.requires_grad and any([t in n for t in top_layers]))/1e6,
-#                     'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-#                                         if p.requires_grad and not any([t in n for t in top_layers]))/1e6,
-#                     }
-#         params[net] = net_dict
+for net in all_models:
+    conf_model = conf_models[net]
+    if key == 'resnet':
+        model = ModelSimCLRResNet('cifar10', conf_model['depth'], conf_model['layers'], conf_model['bottleneck'],
+                False, conf_model['hidden_dim'], conf_model['out_features'], groups = conf_model['groups'],
+                width_per_group=conf_model['width_per_group'])
+        l1, l2, l3, l4 = conf_model['layers']
+        net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
+                    'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+                                        if p.requires_grad and ('layer1' in n or 'layer2' in n))/1e6,
+                    'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+                                        if p.requires_grad and ('layer3' in n or 'layer4' in n))/1e6,
+                    'l1':l1, 'l2': l2, 'l3': l3, 'l4': l4}
+        params[net] = net_dict
+    else:
+        inverted_residual_setting = [[conf_model['t'][i],conf_model['c'][i],conf_model['n'][i],conf_model['s'][i]] \
+                                        for i in range(len(conf_model['t']))]
+        model = ModelSimCLRMobileNet(hidden_dim = conf_model["hidden_dim"], out_features = conf_model["out_features"],
+                inverted_residual_setting = inverted_residual_setting, width_mult = conf_model['width_mult'], compress = False
+                )
+        top_layers = [f'features.{i}.' for i in range(0,sum(conf_model['n'][:4]))]
+        net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
+                    'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+                                        if p.requires_grad and any([t in n for t in top_layers]))/1e6,
+                    'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+                                        if p.requires_grad and not any([t in n for t in top_layers]))/1e6,
+                    'width': conf_model['width_mult']
+                    }
+        params[net] = net_dict
 
+net_names = list(params.keys())
+total_params = [params[p]['params'] for p in params]
+mults = [params[p]['width'] for p in params]
+sort_idx = sorted(range(len(total_params)), key=lambda k: total_params[k])
+print({net_names[i]:(mults[i],total_params[i]) for i in sort_idx})
 # if key == 'resnet':
 #     params['resnet18_blur'] = params['resnet18']
 #     params['resnet34_blur'] = params['resnet34']
@@ -142,7 +148,7 @@ imagenet_models = imagenet_resnet_models if key == 'resnet' else imagenet_mobile
 # with open(f'/vulcanscratch/sgirish/dummy/{key}_params.json','w') as f:
 #     json.dump(params,f)
 
-# exit()
+exit()
 
 dataset_names = list(np.unique(np.array(dataset)))
 model_names = list(np.unique(np.array(list(imagenet_models.keys()))))
