@@ -296,6 +296,8 @@ class TrainerSimClr(EnforceOverrides):
             self.update_checkpoint(self._checkpoint)
             print('Saving best checkpoint')
             self._checkpoint.commit()
+            dirname = os.path.dirname(self._checkpoint.filepath)
+            torch.save(self._checkpoint.data, os.path.join(dirname,f'checkpoint_{epoch}.pth'))
             
             save_intermediate = self._conf_train['save_intermediate']
             if save_intermediate:
