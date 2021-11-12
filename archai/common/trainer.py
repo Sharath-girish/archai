@@ -654,7 +654,8 @@ class TrainerLinear(Trainer):
         test_dl = dataloaders.test_dl
         steps_train = len(train_dl)
         steps_test = len(test_dl)
-        if self._apex._enabled and self._apex._distributed_enabled:
+        self.model = self._apex.to_amp_dist(self.model, None, batch_size=0)
+        if self._apex.is_dist():
             self.model.module.backbone.eval()
         else:
             self.model.backbone.eval()
@@ -664,11 +665,14 @@ class TrainerLinear(Trainer):
         Xtest = None
         ytest = None
         logger.pushd('train_steps')
+        logger.info({'total_steps':len(train_dl)})
+        import time
+        start = time.time()
         for step, (xc, yc) in enumerate(train_dl):
             logger.pushd(step)
             xc, yc = xc.to(self.get_device(), non_blocking=True), yc.to(self.get_device(), non_blocking=True)
             with torch.no_grad():
-                if self._apex._enabled and self._apex._distributed_enabled:
+                if self._apex.is_dist():
                     feats = self.model.module.backbone(xc)[-1]
                 else:
                     feats = self.model.backbone(xc)[-1]
@@ -679,6 +683,9 @@ class TrainerLinear(Trainer):
                 else:
                     Xtrain = torch.cat((Xtrain,feats.detach().cpu()),dim=0)
                     ytrain = torch.cat((ytrain,yc.detach().cpu()),dim=0)
+            if step % 10 == 0:
+                logger.info({'step': step, 'timings': time.time()-start})
+            start = time.time()
             logger.popd()
         logger.popd()
         logger.pushd('test_steps')
@@ -688,7 +695,7 @@ class TrainerLinear(Trainer):
             xc, yc = xc.to(self.get_device(), non_blocking=True), yc.to(self.get_device(), non_blocking=True)
 
             with torch.no_grad():
-                if self._apex._enabled and self._apex._distributed_enabled:
+                if self._apex.is_dist():
                     feats = self.model.module.backbone(xc)[-1]
                 else:
                     feats = self.model.backbone(xc)[-1]

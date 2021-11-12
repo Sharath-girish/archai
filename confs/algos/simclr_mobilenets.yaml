@@ -2691,3 +2691,21 @@ mobilenet_v299:
     width_mult: 1.0
     hidden_dim: 2048
     out_features: 128
+
+mobilenet_v300:
+    t: [1,6,6,6,6,6,6]
+    c: [16,24,32,64,96,160,320]
+    n: [1,3,3,5,20,20,1]
+    s: [1,2,2,2,1,2,1]
+    width_mult: 1.4
+    hidden_dim: 2048
+    out_features: 128
+
+mobilenet_v301:
+    t: [1,6,6,6,6,6,6]
+    c: [16,24,32,64,96,160,320]
+    n: [1,3,3,5,20,20,1]
+    s: [1,2,2,2,1,2,1]
+    width_mult: 1.2
+    hidden_dim: 2048
+    out_features: 128

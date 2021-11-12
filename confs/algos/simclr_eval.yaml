@@ -34,6 +34,7 @@ common:
   apex: # this is overriden in search and eval individually
     enabled: False # global switch to disable everything apex
     distributed_enabled: True # enable/disable distributed mode
+    dp_enabled: False # DataParallel instead of Distributed
     mixed_prec_enabled: False # switch to disable amp mixed precision
     gpus: '' # use GPU IDs specified here (comma separated), if '' then use all GPUs
     opt_level: 'O2' # optimization level for mixed precision

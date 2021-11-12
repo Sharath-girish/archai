@@ -26,6 +26,8 @@ class ApexUtils:
         self._apex_config = apex_config
         self._enabled = apex_config['enabled'] # global switch to disable anything apex
         self._distributed_enabled = apex_config['distributed_enabled'] # enable/disable distributed mode
+        self._dp_enabled = apex_config['dp_enabled'] if 'dp_enabled' in apex_config else False
+        assert not (self.is_dp() and self.is_dist())
         self._mixed_prec_enabled = apex_config['mixed_prec_enabled'] # enable/disable distributed mode
         self._opt_level = apex_config['opt_level'] # optimization level for mixed precision
         self._bn_fp32 = apex_config['bn_fp32'] # keep BN in fp32
@@ -113,6 +115,7 @@ class ApexUtils:
                      'global_rank': self.global_rank})
 
 
+
     def _setup_gpus(self, seed:float, detect_anomaly:bool):
         utils.setup_cuda(seed, local_rank=self.local_rank)
 
@@ -177,6 +180,8 @@ class ApexUtils:
         return self._enabled and self._mixed_prec_enabled
     def is_dist(self)->bool:
         return self._enabled and self._distributed_enabled
+    def is_dp(self)->bool:
+        return self._dp_enabled
     def is_master(self)->bool:
         return self.global_rank == 0
     def is_ray(self)->bool:
@@ -262,6 +267,8 @@ class ApexUtils:
                                                               device_ids=[self.local_rank],
                                                               output_device=self.local_rank)
 
+        if self.is_dp():
+            model.backbone = torch.nn.DataParallel(model.backbone).to(self.device)
         return model
 
     def clip_grad(self, clip:float, model:nn.Module, multi_optim:MultiOptim)->None:
