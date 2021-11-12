@@ -5,7 +5,6 @@ import os
 import yaml
 import time
 import torch
-import wandb
 import shutil
 import torch.nn as nn
 from archai.common import utils
@@ -44,6 +43,7 @@ def create_model(conf_train:Config, conf_eval:Config, model_desc_builder:ModelDe
 
 def train_test(conf:Config):
     conf_wandb = conf['common']['wandb']
+    import wandb
     api = wandb.Api()
     runs = api.runs(f"{conf_wandb['entity']}/{conf_wandb['project_name']}")
     for run in runs:
