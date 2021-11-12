@@ -79,13 +79,13 @@ def adjust_learning_rate(optimizer, init_lr, epoch, batch, n_epochs, nBatch):
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', type=str, default=None)
 
-parser.add_argument('--n_epochs', type=int, default=300)
+parser.add_argument('--n_epochs', type=int, default=100)
 parser.add_argument('--manual_seed', type=int, default=None)
-parser.add_argument('--init_lr', type=float, default=0.05)
+parser.add_argument('--init_lr', type=float, default=5.0)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
 parser.add_argument('--dataset_name', type=str, default='cifar10')
 
-parser.add_argument('--train_batch_size', type=int, default=256)
+parser.add_argument('--train_batch_size', type=int, default=128)
 parser.add_argument('--test_batch_size', type=int, default=500)
 
 parser.add_argument('--opt_type', type=str, default='sgd', choices=['sgd', 'lars', 'lbfgs'])
