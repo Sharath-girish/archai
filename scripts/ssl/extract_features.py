@@ -5,6 +5,7 @@ import os
 import yaml
 import time
 import torch
+import wandb
 import shutil
 import torch.nn as nn
 from archai.common import utils
@@ -42,6 +43,12 @@ def create_model(conf_train:Config, conf_eval:Config, model_desc_builder:ModelDe
         return model, model_desc
 
 def train_test(conf:Config):
+    conf_wandb = conf['common']['wandb']
+    api = wandb.Api()
+    runs = api.runs(f"{conf_wandb['entity']}/{conf_wandb['project_name']}")
+    for run in runs:
+        if run.name==conf_wandb['run_name'] and run.State == 'finished':
+            exit()
     conf_loader = conf['loader']
     conf_trainer = conf['trainer']
     conf_dataset = conf_loader['dataset']
@@ -247,6 +254,7 @@ if __name__ == '__main__':
     #     commonstate = get_state()
     #     init_from(commonstate)
     #     print('Running child process')
+
     train_test(conf)
 
 
