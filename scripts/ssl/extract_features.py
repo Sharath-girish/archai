@@ -47,7 +47,7 @@ def train_test(conf:Config):
     api = wandb.Api()
     runs = api.runs(f"{conf_wandb['entity']}/{conf_wandb['project_name']}")
     for run in runs:
-        if run.name==conf_wandb['run_name'] and run.State == 'finished':
+        if run.name==conf_wandb['run_name'] and run.State == 'finished' and 'imagenet' not in run.name:
             exit()
     conf_loader = conf['loader']
     conf_trainer = conf['trainer']
