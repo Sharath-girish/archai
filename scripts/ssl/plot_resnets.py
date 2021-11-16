@@ -62,13 +62,15 @@ def param_plots(params, models, dataset_name, dataset, key):
         plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/top_params_legend_{dataset}_{key}.pdf')
 
     plt.clf()
-    g = sns.lmplot('Bottom Params', f'{dataset_name} Accuracy', df, order=2, truncate=False)
-    plt.show()
-    plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/bottom_params_{dataset}_{key}.pdf')
-    plt.clf()
+    plt.title('ResNets' if key=='resnet' else 'MobileNets')
     g = sns.lmplot('Top Params', f'{dataset_name} Accuracy', df, order=2, truncate=False)
     plt.show()
     plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/top_params_{dataset}_{key}.pdf')
+    plt.clf()
+    plt.title('ResNets' if key=='resnet' else 'MobileNets')
+    g = sns.lmplot('Bottom Params', f'{dataset_name} Accuracy', df, order=2, truncate=False)
+    plt.show()
+    plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/bottom_params_{dataset}_{key}.pdf')
 key = 'mobilenet'
 # key = 'resnet'
 with open(f'/vulcanscratch/sgirish/dummy/resnet_params.json','r') as f:
@@ -92,55 +94,50 @@ with open('/vulcanscratch/sgirish/eval_models.csv') as csv_file:
         if name.strip().split('-')[0].split('_')[-1] == 'imagenet':
             if 'resnet' in name.strip().split('-')[-1] and float(row['epoch_top1_test'])>54.0 and float(resnet_params[name.strip().split('-')[-1]]['params']<30):
                 imagenet_resnet_models[name.strip().split('-')[-1]] = float(row['epoch_top1_test'])
-            elif 'mobilenet' in name.strip().split('-')[-1] and float(mobilenet_params[name.strip().split('-')[-1]]['params']<3):
+            elif 'mobilenet' in name.strip().split('-')[-1] and float(mobilenet_params[name.strip().split('-')[-1]]['params']<10):
                 imagenet_mobilenet_models[name.strip().split('-')[-1]] = float(row['epoch_top1_test'])
 imagenet_models = imagenet_resnet_models if key == 'resnet' else imagenet_mobilenet_models
 
-params = {}
-if key == 'resnet':
-    with open('confs/algos/simclr_resnets.yaml', 'r') as f:
-        conf_models = yaml.load(f, Loader=yaml.Loader)
-    all_models = ['resnet18','resnet34','resnet50']+[f'resnet_v{i}' for i in range(1,92)]
-elif key == 'mobilenet':
-    with open('confs/algos/simclr_mobilenets.yaml', 'r') as f:
-        conf_models = yaml.load(f, Loader=yaml.Loader)
-    all_models = [f'mobilenet_v{i}' for i in range(172,299)]
+# params = {}
+# if key == 'resnet':
+#     with open('confs/algos/simclr_resnets.yaml', 'r') as f:
+#         conf_models = yaml.load(f, Loader=yaml.Loader)
+#     all_models = ['resnet18','resnet34','resnet50']+[f'resnet_v{i}' for i in range(1,208)]
+# elif key == 'mobilenet':
+#     with open('confs/algos/simclr_mobilenets.yaml', 'r') as f:
+#         conf_models = yaml.load(f, Loader=yaml.Loader)
+#     all_models = [f'mobilenet_v{i}' for i in range(1,300)]
 
-for net in all_models:
-    conf_model = conf_models[net]
-    if key == 'resnet':
-        model = ModelSimCLRResNet('cifar10', conf_model['depth'], conf_model['layers'], conf_model['bottleneck'],
-                False, conf_model['hidden_dim'], conf_model['out_features'], groups = conf_model['groups'],
-                width_per_group=conf_model['width_per_group'])
-        l1, l2, l3, l4 = conf_model['layers']
-        net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
-                    'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-                                        if p.requires_grad and ('layer1' in n or 'layer2' in n))/1e6,
-                    'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-                                        if p.requires_grad and ('layer3' in n or 'layer4' in n))/1e6,
-                    'l1':l1, 'l2': l2, 'l3': l3, 'l4': l4}
-        params[net] = net_dict
-    else:
-        inverted_residual_setting = [[conf_model['t'][i],conf_model['c'][i],conf_model['n'][i],conf_model['s'][i]] \
-                                        for i in range(len(conf_model['t']))]
-        model = ModelSimCLRMobileNet(hidden_dim = conf_model["hidden_dim"], out_features = conf_model["out_features"],
-                inverted_residual_setting = inverted_residual_setting, width_mult = conf_model['width_mult'], compress = False
-                )
-        top_layers = [f'features.{i}.' for i in range(0,sum(conf_model['n'][:4]))]
-        net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
-                    'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-                                        if p.requires_grad and any([t in n for t in top_layers]))/1e6,
-                    'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
-                                        if p.requires_grad and not any([t in n for t in top_layers]))/1e6,
-                    'width': conf_model['width_mult']
-                    }
-        params[net] = net_dict
+# for net in all_models:
+#     conf_model = conf_models[net]
+#     if key == 'resnet':
+#         model = ModelSimCLRResNet('cifar10', conf_model['depth'], conf_model['layers'], conf_model['bottleneck'],
+#                 False, conf_model['hidden_dim'], conf_model['out_features'], groups = conf_model['groups'],
+#                 width_per_group=conf_model['width_per_group'])
+#         l1, l2, l3, l4 = conf_model['layers']
+#         net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
+#                     'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+#                                         if p.requires_grad and ('layer1' in n or 'layer2' in n))/1e6,
+#                     'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+#                                         if p.requires_grad and ('layer3' in n or 'layer4' in n))/1e6,
+#                     'l1':l1, 'l2': l2, 'l3': l3, 'l4': l4, 'bottleneck':conf_model['bottleneck']}
+#         params[net] = net_dict
+#     else:
+#         inverted_residual_setting = [[conf_model['t'][i],conf_model['c'][i],conf_model['n'][i],conf_model['s'][i]] \
+#                                         for i in range(len(conf_model['t']))]
+#         model = ModelSimCLRMobileNet(hidden_dim = conf_model["hidden_dim"], out_features = conf_model["out_features"],
+#                 inverted_residual_setting = inverted_residual_setting, width_mult = conf_model['width_mult'], compress = False
+#                 )
+#         top_layers = [f'features.{i}.' for i in range(0,sum(conf_model['n'][:4]))]
+#         net_dict = {'params':sum(p.numel() for p in model.backbone.parameters() if p.requires_grad)/1e6,
+#                     'top_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+#                                         if p.requires_grad and any([t in n for t in top_layers]))/1e6,
+#                     'bottom_params':sum(p.numel() for n,p in model.backbone.named_parameters() \
+#                                         if p.requires_grad and not any([t in n for t in top_layers]))/1e6,
+#                     'width': conf_model['width_mult']
+#                     }
+#         params[net] = net_dict
 
-net_names = list(params.keys())
-total_params = [params[p]['params'] for p in params]
-mults = [params[p]['width'] for p in params]
-sort_idx = sorted(range(len(total_params)), key=lambda k: total_params[k])
-print({net_names[i]:(mults[i],total_params[i]) for i in sort_idx})
 # if key == 'resnet':
 #     params['resnet18_blur'] = params['resnet18']
 #     params['resnet34_blur'] = params['resnet34']
@@ -148,7 +145,7 @@ print({net_names[i]:(mults[i],total_params[i]) for i in sort_idx})
 # with open(f'/vulcanscratch/sgirish/dummy/{key}_params.json','w') as f:
 #     json.dump(params,f)
 
-exit()
+# exit()
 
 dataset_names = list(np.unique(np.array(dataset)))
 model_names = list(np.unique(np.array(list(imagenet_models.keys()))))
@@ -163,11 +160,35 @@ keep_model_idx = np.arange(accs.shape[0])[np.all(accs!=0.0,axis=1)]
 imagenet_models_subset = {k:v for k,v in imagenet_models.items() if model_names.index(k) in keep_model_idx}
 accs = accs[keep_model_idx]
 
-model_plot = [model[i] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
-dataset_plot = [dataset[i] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
-acc_plot_y = [acc[i] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
-acc_plot_x = [imagenet_models[model[i]] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
 
+if key == 'resnet':
+    corr = {'aircraft':-0.38, 'cars196':-0.3,'cifar10':0.85,'cifar100':0.91,'cub200':0.64,
+            'dogs120':0.9,'flower102':0.38,'mit67':0.57,'sport8':-0.14,'svhn':0.44}
+    corr_strings = {'aircraft':'-.38', 'cars196':'-.3','cifar10':'.85','cifar100':'.91','cub200':'.64',
+            'dogs120':'.9','flower102':'.38','mit67':'.57','sport8':'-.14','svhn':'.44'}
+else:
+    corr = {'aircraft':0.33, 'cars196':0.02,'cifar10':0.35,'cifar100':0.29,'cub200':0.52,
+            'dogs120':0.51,'flower102':0.57,'mit67':0.23,'sport8':-0.02,'svhn':0.47}
+    corr_strings = {'aircraft':'.33', 'cars196':'.02','cifar10':'.35','cifar100':'.29','cub200':'.52',
+            'dogs120':'.51','flower102':'.57','mit67':'.23','sport8':'-.02','svhn':'.47'}
+corr_inv = {v:k for k,v in corr.items()}
+corrs = list(corr.values())
+corrs.sort(reverse=True)
+dataset_names_sorted = [corr_inv[c] for c in corrs]
+#########
+dataset_names_sorted = dataset_names_sorted[:5]
+dataset_names_sorted = ['cifar100', 'dogs120', 'flower102', 'cars196', 'aircraft']
+###############
+# model_plot = [model[i] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
+# dataset_plot = [dataset[i] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
+# acc_plot_y = [acc[i] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
+# acc_plot_x = [imagenet_models[model[i]] for i in range(len(acc)) if dataset[i]!='imagenet' and model[i] in imagenet_models_subset]
+###############
+model_plot = [model[i] for i in range(len(acc)) if dataset[i] in dataset_names_sorted[:5] and model[i] in imagenet_models_subset]
+dataset_plot = [dataset[i] for i in range(len(acc)) if dataset[i] in dataset_names_sorted[:5] and model[i] in imagenet_models_subset]
+acc_plot_y = [acc[i] for i in range(len(acc)) if dataset[i] in dataset_names_sorted[:5] and model[i] in imagenet_models_subset]
+acc_plot_x = [imagenet_models[model[i]] for i in range(len(acc)) if dataset[i] in dataset_names_sorted[:5] and model[i] in imagenet_models_subset]
+#############
 sns.set(font_scale=1.6)
 df = pd.DataFrame(list(zip(acc_plot_x, acc_plot_y, dataset_plot)), \
                     columns=['ImageNet Accuracy', 'Accuracy','Dataset'])
@@ -179,47 +200,45 @@ sns.set_style("darkgrid")
 # grid.map(sns.lmplot, "ImageNet Accuracy", "Accuracy")
 # grid.add_legend()
 
-if key == 'resnet':
-    corr = {'aircraft':-0.38, 'cars196':-0.3,'cifar10':0.85,'cifar100':0.91,'cub200':0.64,
-            'dogs120':0.9,'flower102':0.38,'mit67':0.57,'sport8':-0.14,'svhn':0.44}
-else:
-    corr = {'aircraft':-0.38, 'cars196':-0.3,'cifar10':0.85,'cifar100':0.91,'cub200':0.64,
-            'dogs120':0.9,'flower102':0.38,'mit67':0.57,'sport8':-0.14,'svhn':0.44}
-corr_inv = {v:k for k,v in corr.items()}
-corrs = list(corr.values())
-corrs.sort(reverse=True)
-dataset_names_sorted = [corr_inv[c] for c in corrs]
-
 g = sns.lmplot(x="ImageNet Accuracy", y="Accuracy", col="Dataset", col_order=dataset_names_sorted,
-               data=df, col_wrap=5, sharey=False, sharex=True, truncate=False)
+               data=df, col_wrap=5, sharey=False, sharex=True, truncate=False, ci=100, x_ci=100, fit_reg=False)
 
 cur_dataset = ['imagenet']+[n for n in dataset_names if n!='cifar10' and n!='imagenet']
-cur_dataset_names = {'aircraft':'Aircraft', 'flower102':'Flowers102', 'cars196':'Stanford Cars', 'imagenet':'ImageNet',
-                     'cifar10':'Cifar10', 'cifar100':'Cifar100', 'cub200':'Caltech Birds', 'dogs120':'Stanford Dogs',
+#########
+# cur_dataset = ['imagenet', 'flower102', 'cub200', 'dogs120', 'svhn']
+cur_dataset = ['imagenet','cifar100', 'dogs120', 'flower102', 'cars196']
+#########
+cur_dataset_names = {'aircraft':'FGVC Aircraft', 'flower102':'Oxford Flowers', 'cars196':'Stanford Cars', 'imagenet':'ImageNet',
+                     'cifar10':'Cifar10', 'cifar100':'Cifar100', 'cub200':'CUB', 'dogs120':'Stanford Dogs',
                      'mit67':'MIT67', 'sport8':'Sports', 'svhn':'SVHN'}
+title_key = 'ResNet' if key=='resnet' else 'MobileNet'
+cur_dataset_titles = {k:title_key+f'-{cur_dataset_names[k]} ('+r'$\rho$='+corr_strings[k]+')' for k in dataset_names_sorted}
 cur_dataset_names_map = cur_dataset_names
 in_min = min(list(imagenet_models_subset.values()))
 in_max = max(list(imagenet_models_subset.values()))
-for i in range(10):
+for i in range(len(dataset_names_sorted)):
     dataset_name = dataset_names_sorted[i]
     # print(dataset_name, cur_accs.min(),cur_accs.max())
     cur_accs = [a for i,a in enumerate(acc) if dataset[i]==dataset_name and model[i] in imagenet_models_subset]
     g.axes[i].set_ylim((min(cur_accs)*0.998,max(cur_accs)*1.002))
-    g.axes[i].set_xlim((in_min,in_max))
-    g.axes[i].set_title(cur_dataset_names[dataset_name])
+    mean = (in_min+in_max)/2.0
+    new_min = mean-1.85
+    new_max = mean+1.85
+    g.axes[i].set_xlim((new_min,new_max))
+    g.axes[i].set_title(cur_dataset_titles[dataset_name])
     # g.axes[i].text(0,0, "An annotation", horizontalalignment='center', size='medium', color='black', weight='semibold')
-    g.axes[i].annotate(f'Linear corr. coefficient={corr[dataset_name]}', xy=(0.3,0.5), xycoords='figure fraction',xytext=(0.2,0.05), 
-                        textcoords='axes fraction', fontsize=14)
+    # g.axes[i].annotate(f'Linear corr. coefficient={corr[dataset_name]}', xy=(0.3,0.5), xycoords='figure fraction',xytext=(0.2,0.05), 
+    #                     textcoords='axes fraction', fontsize=14)
 plt.show()
-plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/downstream_accs_{key}.pdf')
+plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/downstream_accs_small_{key}.pdf')
 cur_dataset_names = [cur_dataset_names[k] for k in cur_dataset]
 if key == 'resnet':
     min_vals = {'aircraft':38.0, 'flower102':91.5, 'cars196':32.0, 'imagenet':54.0, 'cifar10':82.0, 'cifar100':59.0,
                 'cub200':28.0, 'dogs120':46.0, 'mit67':65.0, 'svhn':66.0, 'sport8':94.5}
 else:
-    min_vals = {'aircraft':0.0, 'flower102':0.0, 'cars196':0.0, 'imagenet':40.5, 'cifar10':0.0, 'cifar100':0.0,
+    min_vals = {'aircraft':0.0, 'flower102':0.0, 'cars196':0.0, 'imagenet':0.0, 'cifar10':0.0, 'cifar100':0.0,
                 'cub200':0.0, 'dogs120':0.0, 'mit67':0.0, 'svhn':0.0, 'sport8':0.0}
-max_params = 30 if key == 'resnet' else 3
+max_params = 30 if key == 'resnet' else 10
 acc_y = [acc[i] for i in range(len(acc)) if dataset[i] in cur_dataset and key in model[i] and \
             params[model[i]]['params']<max_params and acc[i]>min_vals[dataset[i]]]
 params_x = [params[model[i]]['params'] for i in range(len(acc)) if dataset[i] in cur_dataset and key in model[i] and \
@@ -230,17 +249,23 @@ df = pd.DataFrame(list(zip(params_x, acc_y, dataset_plot)), columns=['Params (in
 plt.clf()
 plt.grid()
 dataset_names_sortedv2 = ['imagenet']+[n for n in dataset_names_sorted if n!='cifar10']
+#########
+# dataset_names_sortedv2 = dataset_names_sortedv2[:5]
+dataset_names_sortedv2 = ['imagenet','cifar100', 'dogs120', 'flower102', 'cars196']
+########
 g = sns.lmplot(x="Params (in Million)", y="Accuracy", col="Dataset", col_order=dataset_names_sortedv2,
-            data=df, col_wrap=5, sharey=False, sharex=True, truncate=False, order=2)
+            data=df, col_wrap=5, sharey=False, sharex=True, truncate=False, order=2, fit_reg=False)
 for j in range(len(cur_dataset)):
     cur_accs = [acc[i] for i in range(len(acc)) if dataset[i] == dataset_names_sortedv2[j] and key in model[i] and \
                 params[model[i]]['params']<max_params and acc[i]>min_vals[dataset[i]]]
-    g.axes[j].set_xlim((min(params_x)*0.998,max(params_x)*1.002))
+    mean = (min(params_x)+max(params_x))/2.0
+    new_min = min(params_x)
+    new_max = max(params_x)
+    g.axes[j].set_xlim(new_min*0.998,new_max*1.002)
     g.axes[j].set_ylim((min(cur_accs)*0.998,max(cur_accs)*1.002))
     g.axes[j].set_title(cur_dataset_names_map[dataset_names_sortedv2[j]])
 plt.show()
-plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/downstream_params_{key}.pdf')
-
+plt.savefig(f'/vulcanscratch/sgirish/results_imagenet/downstream_params_small_{key}.pdf')
 # param_plots(params, imagenet_models, 'ImageNet', 'imagenet', key)
 for plot_dataset, plot_dataset_name, min_acc in zip(cur_dataset,cur_dataset_names,[min_vals[d] for d in cur_dataset]):
     cur_accs = {}
@@ -249,9 +274,11 @@ for plot_dataset, plot_dataset_name, min_acc in zip(cur_dataset,cur_dataset_name
     param_plots(params, cur_accs, plot_dataset_name, plot_dataset, key)
 
 
-# in_index = dataset_names.index('imagenet')
-# accs = np.concatenate((accs[:,in_index:in_index+1],accs[:,:in_index],accs[:,in_index+1:]),axis=1)
 # new_dataset_names = ['imagenet']+dataset_names_sorted
+# new_accs = np.zeros_like(accs)
+# for i,name in enumerate(new_dataset_names):
+#     new_accs[:,i] = accs[:,dataset_names.index(name)] 
+# accs = new_accs
 # pears = np.zeros((len(new_dataset_names),len(new_dataset_names)))
 # spear = np.zeros((len(new_dataset_names),len(new_dataset_names)))
 # for i in range(len(new_dataset_names)):

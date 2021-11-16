@@ -660,14 +660,6 @@ class TrainerLinear(Trainer):
         else:
             self.model.backbone.eval()
 
-        Xtrain = None
-        ytrain = None
-        Xtest = None
-        ytest = None
-        logger.pushd('train_steps')
-        logger.info({'total_steps':len(train_dl)})
-        import time
-        start = time.time()
         for step, (xc, yc) in enumerate(train_dl):
             logger.pushd(step)
             xc, yc = xc.to(self.get_device(), non_blocking=True), yc.to(self.get_device(), non_blocking=True)
@@ -676,19 +668,38 @@ class TrainerLinear(Trainer):
                     feats = self.model.module.backbone(xc)[-1]
                 else:
                     feats = self.model.backbone(xc)[-1]
-
-                if Xtrain is None:
-                    Xtrain = feats.detach().cpu()
-                    ytrain = yc.detach().cpu()
+            dim = feats.size(1)
+            break
+        n = len(train_dl.dataset)
+        Xtrain = torch.zeros((n,dim))
+        ytrain = torch.zeros(n)
+        n = len(test_dl.dataset)
+        Xtest = torch.zeros((n,dim))
+        ytest = torch.zeros(n)
+        logger.pushd('train_steps')
+        logger.info({'total_steps':len(train_dl)})
+        import time
+        init = time.time()
+        start = time.time()
+        count = 0
+        for step, (xc, yc) in enumerate(train_dl):
+            logger.pushd(step)
+            xc, yc = xc.to(self.get_device(), non_blocking=True), yc.to(self.get_device(), non_blocking=True)
+            with torch.no_grad():
+                if self._apex.is_dist():
+                    feats = self.model.module.backbone(xc)[-1]
                 else:
-                    Xtrain = torch.cat((Xtrain,feats.detach().cpu()),dim=0)
-                    ytrain = torch.cat((ytrain,yc.detach().cpu()),dim=0)
+                    feats = self.model.backbone(xc)[-1]
+                Xtrain[count:count+xc.size(0)] = feats.detach().cpu()
+                ytrain[count:count+xc.size(0)] = yc.detach().cpu()
             if step % 10 == 0:
-                logger.info({'step': step, 'timings': time.time()-start})
+                logger.info({'step': step, 'timings': time.time()-start, 'total_steps':len(train_dl), 'total_time':time.time()-init})
             start = time.time()
             logger.popd()
+            count = count+xc.size(0)
         logger.popd()
         logger.pushd('test_steps')
+        count = 0
         for step, (xc, yc) in enumerate(test_dl):
             logger.pushd(step)
 
@@ -706,7 +717,10 @@ class TrainerLinear(Trainer):
                 else:
                     Xtest = torch.cat((Xtest,feats.detach().cpu()),dim=0)
                     ytest = torch.cat((ytest,yc.detach().cpu()),dim=0)
+                Xtest[count:count+xc.size(0)] = feats.detach().cpu()
+                ytest[count:count+xc.size(0)] = yc.detach().cpu()
             logger.popd()
+            count = count+xc.size(0)
         logger.popd()
 
         return Xtrain, ytrain, Xtest, ytest

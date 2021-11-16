@@ -220,7 +220,11 @@ def train_test(conf:Config):
     st = time.time()
     Xtrain, ytrain, Xtest, ytest = trainer.extract_features(data_loaders)
 
+    dataset_name = conf_loader['dataset']['name']
     features = {'Xtrain': Xtrain, 'Ytrain': ytrain, 'Xtest': Xtest, 'Ytest': ytest}
+
+    # filepath = os.path.join(utils.full_path(conf['common']['logdir']),f'features_{dataset_name}.pt')
+    # torch.save(features, filepath)
 
     linear_reg(features)
     # if not (save_intermediate and os.path.exists(os.path.join(intermediatedir,\

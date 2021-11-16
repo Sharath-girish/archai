@@ -118,6 +118,7 @@ def train(args, Xtrain, Ytrain, Xeval, Yeval, model, print_logs=False):
     len_dataset_train = Xtrain.size(0)
     len_dataset_test = Xeval.size(0)
 
+    Ytrain, Yeval = Ytrain.long(), Yeval.long()
     shuffle_idx = np.arange(len(Xtrain))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

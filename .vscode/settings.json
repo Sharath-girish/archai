@@ -10,4 +10,5 @@
         "./archai"
     ],
     "python.pythonPath": "/vulcanscratch/sgirish/venvs/env_archai/bin/python",
+    "azureML.defaultWorkspaceId": "/subscriptions/dafd9099-a166-4095-8f1f-1a94ceda67ac/resourceGroups/neel/providers/Microsoft.MachineLearningServices/workspaces/cvgroupeast",
 }
